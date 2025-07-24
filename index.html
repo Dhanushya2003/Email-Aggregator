@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Aggregator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f4;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    #filter-section {
+      margin-bottom: 20px;
+    }
+
+    #email-list {
+      background: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .email-item {
+      border-bottom: 1px solid #ccc;
+      padding: 10px;
+    }
+
+    .email-item:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      font-size: 0.8em;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Email Aggregator</h1>
+
+  <div id="filter-section">
+    <label for="account">Filter by Account:</label>
+    <select id="account"></select>
+
+    <label for="folder">Filter by Folder:</label>
+    <select id="folder"></select>
+
+    <input type="text" id="search" placeholder="Search emails..." />
+    <button onclick="searchEmails()">Search</button>
+  </div>
+
+  <div id="email-list"></div>
+
+  <script>
+    const API_URL = "http://localhost:3000"; // ✅ corrected port
+
+    async function fetchEmails(filters = {}) {
+      let url = `${API_URL}/emails?`;
+      if (filters.account) url += `account=${filters.account}&`;
+      if (filters.folder) url += `folder=${filters.folder}&`;
+      if (filters.query) url += `q=${filters.query}`;
+
+      const res = await fetch(url);
+      const emails = await res.json();
+      renderEmails(emails);
+    }
+
+    function renderEmails(emails) {
+      const emailList = document.getElementById("email-list");
+      emailList.innerHTML = "";
+
+      emails.forEach(email => {
+        const div = document.createElement("div");
+        div.className = "email-item";
+        div.innerHTML = `
+          <strong>From:</strong> ${email.from}<br/>
+          <strong>Subject:</strong> ${email.subject}<br/>
+          <strong>Folder:</strong> ${email.folder}<br/>
+          <strong>Category:</strong> <span class="label" style="background:${getLabelColor(email.category)}">${email.category}</span>
+        `;
+        emailList.appendChild(div);
+      });
+    }
+
+    function getLabelColor(category) {
+      const colors = {
+        "Interested": "green",
+        "Spam": "gray",
+        "Meeting Booked": "blue",
+        "Not Interested": "red",
+        "Out of Office": "orange"
+      };
+      return colors[category] || "black";
+    }
+
+    async function populateFilters() {
+      const res = await fetch(`${API_URL}/filters`);
+      const { accounts, folders } = await res.json();
+
+      const accountSelect = document.getElementById("account");
+      const folderSelect = document.getElementById("folder");
+
+      accounts.forEach(acc => {
+        const opt = document.createElement("option");
+        opt.value = acc;
+        opt.textContent = acc;
+        accountSelect.appendChild(opt);
+      });
+
+      folders.forEach(folder => {
+        const opt = document.createElement("option");
+        opt.value = folder;
+        opt.textContent = folder;
+        folderSelect.appendChild(opt);
+      });
+    }
+
+    function searchEmails() {
+      const account = document.getElementById("account").value;
+      const folder = document.getElementById("folder").value;
+      const query = document.getElementById("search").value;
+      fetchEmails({ account, folder, query });
+    }
+
+    populateFilters();
+    fetchEmails();
+  </script>
+</body>
+</html>
